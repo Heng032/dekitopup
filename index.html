@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="km" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deki TopUp</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti for Payment Success -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts - Kantumruuy Pro & Battambang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruuy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Battambang:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Kantumruuy Pro', 'sans-serif'],
+                        khmer: ['Battambang', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            400: '#38bdf8',
+                            500: '#0088ff',
+                            600: '#0066cc',
+                            cyan: '#00d2ff',
+                            gold: '#f59e0b',
+                            dark: '#080d1a',
+                            card: '#111827',
+                            border: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Kantumruuy Pro', sans-serif;
+            background-color: #080d1a;
+            color: #f3f4f6;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .brand-font {
+            font-family: 'Eras Bold ITC', sans-serif;
+        }
+
+        /* Glow effects matching Deki TopUp visual theme */
+        .glow-blue {
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.25);
+        }
+        .glow-hover:hover {
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.45);
+            border-color: #00d2ff;
+        }
+        @keyframes banner-badge-enter {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .banner-badge {
+            animation: banner-badge-enter 500ms ease-out both;
+        }
+        .banner-badge:nth-child(2) {
+            animation-delay: 15ms;
+        }
+        .banner-badge:nth-child(3) {
+            animation-delay: 24ms;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .banner-badge {
+                animation: none;
+            }
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #080d1a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0088ff;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-400 selection:text-slate-950">
+
+    <!-- Toast Notification Overlay -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+            <!-- Brand Logo & Title -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+                <div class="relative w-12 h-12 rounded-2xl p-0.5 bg-gradient-to-tr from-cyan-400 via-blue-600 to-amber-400 shadow-lg shadow-cyan-500/20 overflow-hidden">
+                    <img src="image/deki.png" alt="Deki TopUp Logo" class="w-full h-full object-cover rounded-[14px]">
+                </div>
+                <div>
+                    <span class="brand-font text-2xl font-black tracking-wider bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-300 bg-clip-text text-transparent">
+                        Deki TopUp
+                    </span>
+                    <span class="block text-[11px] text-cyan-400 font-medium">បញ្ចូលហ្គេមរហ័ស & សុវត្ថិភាព </span>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="flex-1 max-w-md hidden md:block">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="searchInput" onkeyup="filterGames()" 
+                           placeholder="ស្វែងរកហ្គេមដែលអ្នកចង់ Top Up..." 
+                           class="w-full pl-11 pr-4 py-2.5 bg-slate-900/90 border border-slate-700/80 rounded-xl text-sm focus:outline-none focus:border-cyan-400 text-slate-100 placeholder-slate-400 transition">
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="openHistoryModal()" class="flex items-center gap-2 px-3.5 py-2.5 bg-slate-800/90 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs sm:text-sm font-medium text-slate-200 transition">
+                    <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i>
+                    <span class="hidden sm:inline">ប្រវត្តិទិញ</span>
+                </button>
+                <a href="https://t.me/rikitopup_admin" target="_blank" class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-xl text-xs sm:text-sm font-bold text-slate-950 shadow-lg shadow-cyan-500/20 transition">
+                    <i class="fa-brands fa-telegram text-base"></i>
+                    <span class="hidden sm:inline">ជំនួយ</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow">
+        
+        <!-- Mobile Search Input -->
+        <div class="mb-6 md:hidden">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="mobileSearchInput" onkeyup="filterGamesMobile()" 
+                       placeholder="ស្វែងរកហ្គេម..." 
+                       class="w-full pl-11 pr-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-cyan-400 text-slate-200 placeholder-slate-400">
+            </div>
+        </div>
+
+        <!-- Banner Promotion -->
+        <div class="relative overflow-hidden rounded-3xl border border-cyan-500/30 mb-10 shadow-2xl glow-blue">
+            <img src="image/banner.jpg" alt="Deki TopUp gaming banner" class="block w-full h-auto">
+        </div>
+
+        <!-- Filter Categories -->
+        <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+            <div class="flex flex-col gap-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2 brand-font">
+                    <i class="fa-solid fa-gamepad text-cyan-400"></i> Choose Your Game
+                </h2>
+                <div class="flex flex-wrap gap-2 text-[10px] sm:text-xs text-slate-200">
+                    <div class="banner-badge flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-900/85 px-2 py-1.5 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:py-2">
+                        <i class="fa-solid fa-circle-check text-emerald-400"></i> ស្វ័យប្រវត្តិ
+                    </div>
+                    <div class="banner-badge flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-900/85 px-2 py-1.5 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:py-2">
+                        <i class="fa-solid fa-shield-halved text-cyan-400"></i> សុវត្ថិភាព 100%
+                    </div>
+                    <div class="banner-badge flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-900/85 px-2 py-1.5 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:py-2">
+                        <i class="fa-solid fa-bolt-lightning text-amber-400"></i> រហ័សទាន់ចិត្ត
+                    </div>
+                </div>
+            </div>
+            
+            <div id="categoryContainer" class="flex gap-2 overflow-x-auto pb-2 scrollbar-none w-full md:w-auto">
+                <button onclick="filterCategory('all')" class="category-btn active px-4 py-2 rounded-xl text-xs font-semibold bg-cyan-400 text-slate-950 transition whitespace-nowrap shadow-md">ទាំងអស់ (All)</button>
+                <button onclick="filterCategory('mobile')" class="category-btn px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-800">Mobile Games</button>
+                <button onclick="filterCategory('pc')" class="category-btn px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-800">PC Games</button>
+                <button onclick="filterCategory('giftcards')" class="category-btn px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-800">Gift Cards</button>
+            </div>
+        </div>
+
+        <!-- Game Cards Grid -->
+        <div id="gameGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 md:gap-6">
+            <!-- Game Items JS Inserted -->
+        </div>
+
+    </main>
+
+    <!-- Top Up Interactive Modal / Refined Order Flow -->
+    <div id="topupModal" class="fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl my-6">
+            
+            <!-- Modal Header -->
+            <div class="relative bg-slate-800/90 px-6 py-4 border-b border-slate-700/80 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img id="modalGameIcon" src="" alt="" class="w-12 h-12 rounded-2xl object-cover border-2 border-cyan-400 shadow-md">
+                    <div>
+                        <h3 id="modalGameTitle" class="font-bold text-white text-base sm:text-lg">---</h3>
+                        <p id="modalGamePublisher" class="text-xs text-slate-400">---</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="w-9 h-9 rounded-full bg-slate-700/50 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body (Steps Container) -->
+            <div class="p-5 sm:p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+                
+                <!-- Step 1: Account Information with Verify ID on the Right -->
+                <div class="bg-gradient-to-r from-slate-900 via-slate-800/80 to-blue-950/50 p-4 sm:p-5 rounded-2xl border border-cyan-500/30 relative overflow-hidden shadow-lg">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-700/60 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-7 h-7 rounded-xl bg-cyan-400 text-slate-950 text-xs font-black flex items-center justify-center shadow-md">1</span>
+                            <div>
+                                <h4 class="font-bold text-white text-sm">បញ្ចូលអាយឌី​</h4>
+                                <p class="text-[11px] text-slate-400">សូមបញ្ចូល ID ហ្គេមឱ្យបានត្រឹមត្រូវ</p>
+                            </div>
+                        </div>
+                        <span id="accountTypeBadge" class="self-start sm:self-auto text-[10px] font-bold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                            <i class="fa-solid fa-bolt text-amber-400"></i> Direct Top Up
+                        </span>
+                    </div>
+                    
+                    <!-- Input Fields & Verify ID on the Right side -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                        
+                        <!-- ID Inputs (Left / Middle Columns) -->
+                        <div id="userIdColumn" class="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1" id="userIdLabel">User ID / Game ID <span class="text-rose-500">*</span></label>
+                                <input type="text" id="userIdInput" placeholder="ឧទាហរណ៍: 12345678" class="w-full px-3.5 py-2.5 bg-slate-950/90 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition">
+                            </div>
+                            <div id="zoneIdContainer">
+                                <label class="block text-xs font-medium text-slate-300 mb-1" id="zoneIdLabel">Zone ID / Server ID <span class="text-rose-500">*</span></label>
+                                <input type="text" id="zoneIdInput" placeholder="ឧទាហរណ៍: 1234" class="w-full px-3.5 py-2.5 bg-slate-950/90 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition">
+                            </div>
+                        </div>
+
+                        <!-- Verify Button & Status Output (Positioned Cleanly on the RIGHT) -->
+                        <div class="md:col-span-5 flex flex-col items-stretch sm:items-end justify-end space-y-2 pt-1 md:pt-0 border-t md:border-t-0 border-slate-700/50">
+                            <button type="button" onclick="verifyAccountId()" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold rounded-xl text-xs shadow-md shadow-cyan-500/20 transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-shield-check text-sm"></i> Check ID
+                            </button>
+                            
+                            <!-- Dynamic Result Pill Output on Right -->
+                            <div id="verifyResult" class="text-right text-xs font-semibold min-h-[18px]"></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Step 2: Select Package -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-6 h-6 rounded-full bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center">2</span>
+                        <h4 class="font-semibold text-white text-sm">ជ្រើសរើសកញ្ចប់</h4>
+                    </div>
+                    <div id="packageGrid" class="grid grid-cols-1 gap-4">
+                        <!-- Packages populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Step 3: Payment Method -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-6 h-6 rounded-full bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center">3</span>
+                        <h4 class="font-semibold text-white text-sm">វិធីសាស្ត្រទូទាត់ប្រាក់ (Payment Method)</h4>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="paymentMethodsGrid">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="payment" value="ABA Bank Account" class="peer hidden" checked>
+                            <div class="p-3.5 bg-slate-800/60 border border-slate-700 rounded-2xl peer-checked:border-cyan-400 peer-checked:bg-cyan-950/30 flex items-center gap-3 transition">
+                                <div class="w-10 h-10 rounded-xl overflow-hidden shadow-md">
+                                    <img src="image/aba.jpg" alt="ABA Bank" class="w-full h-full object-cover">
+                                </div>
+                                <div class="text-left">
+                                    <span class="font-bold text-xs text-cyan-400 block">ABA Bank</span>
+                                    <span class="text-[10px] text-slate-400">ផ្ទេរប្រាក់តាម ABA Bank ដោយផ្ទាល់</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer / Price Summary -->
+            <div class="bg-slate-950 px-6 py-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs text-slate-400 block">តម្លៃសរុប (Total Amount)</span>
+                    <div class="flex items-baseline gap-2">
+                        <span id="totalPriceUSD" class="text-2xl font-black text-amber-400">$0.00</span>
+                    </div>
+                </div>
+                <button onclick="processCheckout()" class="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-lock text-sm"></i> បន្តការទូទាត់ (Pay Now)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHQR Checkout Interactive Modal -->
+    <div id="khqrModal" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl p-6 text-center relative my-6">
+            <button onclick="closeKhqrModal()" class="absolute right-4 top-4 text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="mb-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full border border-slate-700 mb-2">
+                    <img src="image/deki.png" alt="Deki Logo" class="w-5 h-5 rounded-full object-cover">
+                    <span class="text-xs font-bold text-cyan-400">Deki TopUp Payment</span>
+                </div>
+                <h3 class="text-lg font-bold text-white">ស្កេនទូទាត់ប្រាក់ KHQR</h3>
+                <p class="text-xs text-slate-400 mt-1">សូមប្រើប្រាស់ App ធនាគារ ABA ដើម្បីស្កេនទូទាត់</p>
+            </div>
+
+            <!-- Transaction Summary Box -->
+            <div class="bg-slate-800/60 rounded-xl p-3 mb-4 text-xs space-y-1 text-left border border-slate-700/60">
+                <div class="flex justify-between"><span class="text-slate-400">លេខការកម្មង់:</span><span id="khqrOrderId" class="font-mono text-cyan-400 font-bold">---</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">ហ្គេម:</span><span id="khqrGameTitle" class="text-white font-semibold">---</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">អាខោន ID:</span><span id="khqrAccount" class="text-slate-200">---</span></div>
+            </div>
+
+            <!-- KHQR Display with Deki Logo in Center -->
+            <div class="bg-white p-4 rounded-2xl inline-block shadow-inner border-4 border-rose-600 relative my-1">
+                <div class="w-52 h-52 bg-slate-50 flex flex-col items-center justify-center relative p-2">
+                    <div class="bg-rose-600 text-white text-[11px] font-black px-3 py-0.5 rounded-sm absolute top-0 left-0 right-0 tracking-wider">KHQR</div>
+                    <i class="fa-solid fa-qrcode text-9xl text-slate-900 mt-3"></i>
+                    
+                    <!-- Deki Logo Watermark Center -->
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <img src="image/deki.png" alt="Deki Logo" class="w-10 h-10 rounded-lg border-2 border-white shadow-md">
+                    </div>
+
+                    <span class="text-[10px] text-slate-600 font-bold mt-2 font-mono tracking-wider">SCAN WITH ABA PAY</span>
+                </div>
+            </div>
+
+            <div class="my-3">
+                <p class="text-xs text-slate-400">ចំនួនទឹកប្រាក់ទូទាត់សរុប</p>
+                <p id="khqrAmount" class="text-3xl font-black text-amber-400">$0.00</p>
+            </div>
+
+            <div class="bg-slate-800/80 p-3 rounded-xl mb-4 text-xs text-slate-300 flex justify-between items-center border border-slate-700">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-clock text-amber-400"></i> ពេលវេលានៅសល់:</span>
+                <span id="timerCountdown" class="font-mono font-bold text-cyan-400 text-base">15:00</span>
+            </div>
+
+            <button onclick="confirmPayment()" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm">
+                <i class="fa-solid fa-circle-check text-base"></i> ខ្ញុំបានទូទាត់រួចរាល់ (Simulate Success)
+            </button>
+        </div>
+    </div>
+
+    <!-- Success Receipt Modal -->
+    <div id="successModal" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl p-6 text-center relative">
+            <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl border border-emerald-500/30">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-1 font-khmer">ទូទាត់ជោគជ័យ!</h3>
+            <p class="text-xs text-slate-400 mb-6">ការបញ្ចូលទំនិញត្រូវបានបញ្ជូនដោយជោគជ័យទៅកាន់អាខោនរបស់អ្នក</p>
+
+            <!-- Receipt Info -->
+            <div id="receiptContent" class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 text-left text-xs space-y-2.5 mb-6">
+                <!-- JS populated -->
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeSuccessModal()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition">
+                    បិទ
+                </button>
+                <button onclick="openHistoryModal(); closeSuccessModal();" class="flex-1 py-3 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold rounded-xl text-xs transition">
+                    History
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="px-6 py-4 bg-slate-800/90 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 font-khmer">
+                    <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> ប្រវត្តិការទិញ (Order History)
+                </h3>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div id="historyList" class="p-6 overflow-y-auto space-y-3 flex-grow">
+                <!-- History Items JS inserted -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Status Tracking Modal -->
+    <div id="orderStatusModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 font-khmer">
+                    <i class="fa-solid fa-magnifying-glass text-amber-400"></i> ត្រួតពិនិត្យស្ថានភាពការបញ្ជាទិញ
+                </h3>
+                <button onclick="closeOrderStatusModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-400 mb-4">បញ្ចូលលេខកូដប្រតិបត្តិការ (Order ID) ឬលេខទូរស័ព្ទរបស់អ្នក ដើម្បីពិនិត្យមើលស្ថានភាពនៃការបញ្ចូលទំនិញ៖</p>
+            
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="trackOrderInput" placeholder="ឧទាហរណ៍: ORD982134 ឬ 012345678" class="flex-1 px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-400">
+                <button onclick="searchOrderStatus()" class="px-5 py-2.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold rounded-xl text-xs transition">
+                    ស្វែងរក
+                </button>
+            </div>
+
+            <div id="trackResultContainer" class="hidden">
+                <!-- Track result output JS inserted -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer id="support" class="relative z-10 bg-slate-950 border-t border-slate-800/80 py-10 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+                <div class="flex items-center gap-2 mb-3">
+                    <img src="image/deki.png" alt="Deki Logo" class="w-8 h-8 rounded-lg object-cover">
+                    <span class="brand-font text-xl font-black bg-gradient-to-r from-cyan-400 to-amber-400 bg-clip-text text-transparent">
+                        Deki TopUp
+                    </span>
+                </div>
+                <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                    វេទិកាផ្ដល់សេវាកម្ម Top Up ហ្គេមអនឡាញផ្លូវការ និងរហ័សបំផុតក្នុងប្រទេសកម្ពុជា។ គាំទ្រការទូទាត់ប្រាក់តាម ABA Bank & ABA KHQR ដោយទំនុកចិត្ត និងសុវត្ថិភាព 100%។
+                </p>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-white mb-3 font-khmer">ទំនាក់ទំនង & ជំនួយ (Support 24/7)</h4>
+                <ul class="text-xs text-slate-400 space-y-2.5">
+                    <li><i class="fa-brands fa-telegram text-cyan-400 text-sm mr-2"></i> Telegram: <a href="https://t.me/rikitopup_admin" target="_blank" class="hover:underline text-cyan-400">@rikitopup_admin</a></li>
+                 
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-white mb-3 font-khmer">WE ACCEPT</h4>
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <span class="px-3 py-1.5 bg-slate-900 rounded-lg text-rose-400 border border-slate-800 font-bold"><i class="fa-solid fa-qrcode mr-1"></i> KHQR</span>
+                    <span class="px-3 py-1.5 bg-slate-900 rounded-lg text-cyan-400 border border-slate-800 font-bold"><i class="fa-solid fa-building-columns mr-1"></i> ABA Bank</span>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500 mt-8 pt-6 border-t border-slate-900">
+            © 2026 Deki TopUp Cambodia. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- JavaScript Engine -->
+    <script>
+        // --- GAME CATALOG DATABASE & APP STATE ---
+        const gamesData = [
+            {
+                id: 'mlbb',
+            title: 'MOBILE LEGENDS',
+                publisher: 'Moonton',
+                category: 'mobile',
+                image: 'image/moblie.jpg',
+                discount: 'HOT',
+                hasZoneId: true,
+                userIdLabel: 'User ID',
+                zoneIdLabel: 'Zone ID',
+                packages: [
+                    { id: 'ml_super_value', name: 'super value', priceUSD: 0.95, group: 'recommended', icon: 'fa-gem' },
+                    { id: 'ml_275_ticket', name: '275 [ Full Ticket ]', priceUSD: 3.85, group: 'recommended', icon: 'fa-ticket' },
+                    { id: 'ml_weekly_x3_ticket', name: 'WeeklyX3 [ Full Ticket ]', priceUSD: 4.74, group: 'recommended', icon: 'fa-calendar-week' },
+                    { id: 'ml_165_weekly_ticket', name: '165 + Weekly [ Full Ticket ]', priceUSD: 3.99, group: 'recommended', icon: 'fa-ticket' },
+                    { id: 'ml_weekly', name: 'WeeklyPass', priceUSD: 1.59, group: 'hot', icon: 'fa-calendar-week' },
+                    { id: 'ml_weekly_x5', name: 'Weekly X5', priceUSD: 7.80, group: 'hot', icon: 'fa-calendar-week' },
+                    { id: 'ml_50_plus_50', name: '50 + 50', priceUSD: 0.85, group: 'hot', icon: 'fa-box-open' },
+                    { id: 'ml_150_plus_150', name: '150 + 150', priceUSD: 2.45, group: 'hot', icon: 'fa-box-open' },
+                    { id: 'ml_250_plus_250', name: '250 + 250', priceUSD: 3.85, group: 'hot', icon: 'fa-box-open' },
+                    { id: 'ml_500_plus_500', name: '500 + 500', priceUSD: 7.69, group: 'hot', icon: 'fa-box-open' },
+                    { id: 'ml_twilight', name: 'Twilight', priceUSD: 8.99, group: 'hot', icon: 'fa-dragon' },
+                    { id: 'ml_diamond_86', name: '86 Diamonds', priceUSD: 1.29, group: 'diamonds' },
+                    { id: 'ml_diamond_165', name: '165 Diamonds', priceUSD: 2.45, group: 'diamonds' },
+                    { id: 'ml_diamond_172', name: '172 Diamonds', priceUSD: 2.65, group: 'diamonds' },
+                    { id: 'ml_diamond_275', name: '275 Diamonds', priceUSD: 3.75, group: 'diamonds' },
+                    { id: 'ml_diamond_312', name: '312 Diamonds', priceUSD: 4.29, group: 'diamonds' },
+                    { id: 'ml_diamond_343', name: '343 Diamonds', priceUSD: 4.89, group: 'diamonds' },
+                    { id: 'ml_diamond_361', name: '361 Diamonds', priceUSD: 4.95, group: 'diamonds' },
+                    { id: 'ml_diamond_429', name: '429 Diamonds', priceUSD: 6.09, group: 'diamonds' },
+                    { id: 'ml_diamond_514', name: '514 Diamonds', priceUSD: 7.19, group: 'diamonds' },
+                    { id: 'ml_diamond_565', name: '565 Diamonds', priceUSD: 7.69, group: 'diamonds' },
+                    { id: 'ml_diamond_600', name: '600 Diamonds', priceUSD: 8.49, group: 'diamonds' },
+                    { id: 'ml_diamond_706', name: '706 Diamonds', priceUSD: 9.85, group: 'diamonds' },
+                    { id: 'ml_diamond_878', name: '878 Diamonds', priceUSD: 12.19, group: 'diamonds' },
+                    { id: 'ml_diamond_1049', name: '1049 Diamonds', priceUSD: 14.79, group: 'diamonds' },
+                    { id: 'ml_diamond_1412', name: '1412 Diamonds', priceUSD: 19.59, group: 'diamonds' },
+                    { id: 'ml_diamond_2195', name: '2195 Diamonds', priceUSD: 29.69, group: 'diamonds' },
+                    { id: 'ml_diamond_2538', name: '2538 Diamonds', priceUSD: 34.49, group: 'diamonds' },
+                    { id: 'ml_diamond_3688', name: '3688 Diamonds', priceUSD: 49.50, group: 'diamonds' },
+                    { id: 'ml_diamond_4394', name: '4394 Diamonds', priceUSD: 58.49, group: 'diamonds' },
+                    { id: 'ml_diamond_5532', name: '5532 Diamonds', priceUSD: 73.99, group: 'diamonds' },
+                    { id: 'ml_diamond_6238', name: '6238 Diamonds', priceUSD: 83.49, group: 'diamonds' },
+                    { id: 'ml_diamond_7727', name: '7727 Diamonds', priceUSD: 103.49, group: 'diamonds' },
+                    { id: 'ml_diamond_9288', name: '9288 Diamonds', priceUSD: 124.49, group: 'diamonds' },
+                    { id: 'ml_diamond_11483', name: '11483 Diamonds', priceUSD: 153.49, group: 'diamonds' }
+                ]
+            },
+            {
+                id: 'ff',
+                title: 'FREE FIRE',
+                publisher: 'Garena',
+                category: 'mobile',
+                image: 'image/Freefire.jpg',
+                discount: 'HOT',
+                hasZoneId: false,
+                userIdLabel: 'Player ID',
+                packages: [
+                    { id: 'ff_monthly', name: 'Monthly', priceUSD: 7.55, group: 'recommended', icon: 'fa-calendar' },
+                    { id: 'ff_weekly', name: 'Weekly', priceUSD: 1.58, group: 'recommended', icon: 'fa-calendar-week' },
+                    { id: 'ff_3in1', name: '3in1', priceUSD: 9.49, group: 'recommended', icon: 'fa-box-open' },
+                    { id: 'ff_weekly_lite', name: 'Weekly Lite', priceUSD: 0.39, group: 'recommended', icon: 'fa-calendar-week' },
+                    { id: 'ff_weekly_x2', name: 'Weekly x2', priceUSD: 3.38, group: 'hot', icon: 'fa-calendar-week' },
+                    { id: 'ff_monthly_x2', name: 'Monthly x2', priceUSD: 15.58, group: 'hot', icon: 'fa-calendar' },
+                    { id: 'ff_monthly_x3', name: 'Monthly x3', priceUSD: 23.37, group: 'hot', icon: 'fa-calendar' },
+                    { id: 'ff_monthly_x5', name: 'Monthly x5', priceUSD: 38.90, group: 'hot', icon: 'fa-calendar' },
+                    { id: 'ff_monthly_x10', name: 'Monthly x10', priceUSD: 77.80, group: 'hot', icon: 'fa-calendar' },
+                    { id: 'ff_diamond_100', name: '100', priceUSD: 0.99, group: 'diamonds' },
+                    { id: 'ff_diamond_310', name: '310', priceUSD: 2.99, group: 'diamonds' },
+                    { id: 'ff_diamond_520', name: '520', priceUSD: 4.79, group: 'diamonds' },
+                    { id: 'ff_diamond_1060', name: '1060', priceUSD: 9.39, group: 'diamonds' },
+                    { id: 'ff_diamond_2180', name: '2180', priceUSD: 18.99, group: 'diamonds' },
+                    { id: 'ff_diamond_5600', name: '5600', priceUSD: 47.99, group: 'diamonds' },
+                    { id: 'ff_diamond_11500', name: '11500', priceUSD: 94.99, group: 'diamonds' }
+                ]
+            },
+            {
+                id: 'pubg',
+                title: 'PUBG Mobile',
+                publisher: 'Tencent Games',
+                category: 'mobile',
+                image: 'image/Pubg logo.jpg',
+                discount: 'HOT',
+                hasZoneId: false,
+                userIdLabel: 'Player ID',
+                packages: [
+                    { id: 'pubg_60', name: '60 UC', priceUSD: 0.99, group: 'hot' },
+                    { id: 'pubg_325', name: '325 UC', priceUSD: 5.49, group: 'hot' },
+                    { id: 'pubg_660', name: '660 UC', priceUSD: 9.99, group: 'hot' },
+                    { id: 'pubg_1800', name: '1800 UC', priceUSD: 24.99, group: 'hot' },
+                    { id: 'pubg_3850', name: '3850 UC', priceUSD: 49.99 },
+                    { id: 'pubg_8100', name: '8100 UC', priceUSD: 95.95 }
+                ]
+            },
+            {
+                id: 'ROBLOX',
+                title: 'ROBLOX',
+                publisher: 'ROBLOX',
+                category: 'giftcards',
+                image: 'image/Roblox.jpg',
+                discount: 'COMING SOON',
+                hasZoneId: false,
+                userIdLabel: 'Player ID',
+                packages: []
+            },
+            {
+                id: 'BLOOD STRIKE',
+                title: 'BLOOD STRIKE',
+                publisher: 'NetEase Games',
+                category: 'mobile',
+                image: 'image/Blood Strike (logo).jpg',
+                discount: 'NEW',
+                hasZoneId: false,
+                userIdLabel: 'Player ID',
+                packages: [
+                    { id: 'wr_425', name: '425 Wild Cores', priceUSD: 3.99 },
+                    { id: 'wr_1000', name: '1000 Wild Cores', priceUSD: 8.99 },
+                    { id: 'wr_2050', name: '2050 Wild Cores', priceUSD: 17.99 }
+                ]
+            },
+            {
+                id: 'deltaforce',
+                title: 'DELTA FORCE',
+                publisher: 'DELTA FORCE',
+                category: 'mobile',
+                image: 'image/Deltaforce.jpg',
+                discount: 'HOT',
+                hasZoneId: false,
+                userIdLabel: 'Player ID',
+                packages: [
+                    { id: 'df_60', name: '60', priceUSD: 0.99, icon: 'fa-coins' },
+                    { id: 'df_320', name: '320', priceUSD: 4.50, icon: 'fa-coins' },
+                    { id: 'df_460', name: '460', priceUSD: 6.30, icon: 'fa-coins' },
+                    { id: 'df_750', name: '750', priceUSD: 7.80, icon: 'fa-coins' },
+                    { id: 'df_1480', name: '1480', priceUSD: 15.50, icon: 'fa-coins' },
+                    { id: 'df_1980', name: '1980', priceUSD: 18.50, icon: 'fa-coins' },
+                    { id: 'df_3950', name: '3950', priceUSD: 38.00, icon: 'fa-coins' },
+                    { id: 'df_8100', name: '8100', priceUSD: 78.00, icon: 'fa-coins' },
+                    { id: 'df_bhd_genesis', name: 'BHD - Genesis', priceUSD: 2.00, icon: 'fa-shield-halved' },
+                    { id: 'df_silent_sentinel_advanced', name: 'Silent Sentinel Advanced', priceUSD: 2.00, icon: 'fa-shield-halved' },
+                    { id: 'df_silent_sentinel', name: 'Silent Sentinel', priceUSD: 0.80, icon: 'fa-shield-halved' },
+                    { id: 'df_bhd_redefine', name: 'BHD - Redefine', priceUSD: 4.00, icon: 'fa-shield-halved' }
+                ]
+            },
+            {
+            id: 'HONOR OF KINGS',
+                title: 'HONOR OF KINGS',
+                publisher: 'Tencent Games',
+                category: 'mobile',
+                image: 'image/Hornor.jpg',
+                discount: 'NEW',
+                hasZoneId: false,
+                userIdLabel: 'Player ID',
+                packages: [
+                    { id: 'hok_80_tokens', name: '80 Tokens', priceUSD: 0.99, group: 'hot', icon: 'fa-coins' },
+                    { id: 'hok_240_tokens', name: '240 Tokens', priceUSD: 2.99, group: 'hot', icon: 'fa-coins' },
+                    { id: 'hok_800_tokens', name: '800 Tokens', priceUSD: 9.79, group: 'hot', icon: 'fa-coins' },
+                    { id: 'hok_1200_tokens', name: '1200 Tokens', priceUSD: 13.79, group: 'hot', icon: 'fa-coins' },
+                    { id: 'hok_16_tokens', name: '16 Tokens', priceUSD: 0.25 },
+                    { id: 'hok_400_tokens', name: '400 Tokens', priceUSD: 4.79 },
+                    { id: 'hok_560_tokens', name: '560 Tokens', priceUSD: 6.49 },
+                    { id: 'hok_2400_tokens', name: '2400 Tokens', priceUSD: 27.49 },
+                    { id: 'hok_4000_tokens', name: '4000 Tokens', priceUSD: 44.49 },
+                    { id: 'hok_8000_tokens', name: '8000 Tokens', priceUSD: 88.88 }
+                ]
+            },
+            {
+                id: 'valorant',
+                title: 'Valorant (PC)',
+                publisher: 'Riot Games',
+                category: 'pc',
+                image: 'image/Valorant.jpg',
+                discount: 'POPULAR',
+                hasZoneId: false,
+                userIdLabel: 'Riot ID (#Tag)',
+                packages: [
+                    { id: 'val_475', name: '475 VP', priceUSD: 4.99 },
+                    { id: 'val_1000', name: '1000 VP', priceUSD: 9.49 },
+                    { id: 'val_2050', name: '2050 VP', priceUSD: 19.49 },
+                    { id: 'val_3650', name: '3650 VP', priceUSD: 34.00 },
+                    { id: 'val_5350', name: '5350 VP', priceUSD: 49.49 },
+                    { id: 'val_11000', name: '11000 VP', priceUSD: 95.00 }
+                ]
+            },
+        ];
+
+        let selectedGame = null;
+        let selectedPackage = null;
+        let currentTransaction = null;
+        let timerInterval = null;
+
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgBg = 'bg-slate-800 border-slate-700 text-white';
+            let icon = 'fa-circle-info text-cyan-400';
+            
+            if (type === 'success') {
+                bgBg = 'bg-slate-800 border-emerald-500/50 text-white';
+                icon = 'fa-circle-check text-emerald-400';
+            } else if (type === 'warning') {
+                bgBg = 'bg-slate-800 border-rose-500/50 text-white';
+                icon = 'fa-triangle-exclamation text-rose-400';
+            }
+
+            toast.className = `flex items-center gap-2.5 px-4 py-3 rounded-2xl border ${bgBg} shadow-xl text-xs font-medium pointer-events-auto transition-all duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-sm"></i> <span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Render Games Function
+        function renderGames(data) {
+            const grid = document.getElementById('gameGrid');
+            grid.innerHTML = '';
+            
+            if (data.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-400">
+                        <i class="fa-solid fa-ghost text-5xl mb-3 text-slate-600"></i>
+                        <p class="text-sm font-semibold">មិនរកឃើញហ្គេមដែលអ្នកស្វែងរកទេ</p>
+                    </div>
+                `;
+                return;
+            }
+
+            data.forEach(game => {
+                const card = document.createElement('div');
+                const hasPackages = game.packages.length > 0;
+                card.className = `bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden transition duration-300 flex flex-col justify-between ${hasPackages ? 'hover:border-cyan-400 cursor-pointer hover:-translate-y-1.5 glow-hover' : 'cursor-not-allowed opacity-80'}`;
+                if (hasPackages) card.onclick = () => openTopupModal(game);
+
+                card.innerHTML = `
+                    ${game.image ? `
+                    <div class="relative">
+                        <img src="${game.image}" alt="${game.title}" class="w-full h-36 sm:h-44 object-cover">
+                        <span class="absolute top-2.5 right-2.5 bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full shadow-md">
+                            ${game.discount}
+                        </span>
+                    </div>` : `
+                    <div class="px-3.5 pt-3">
+                        <span class="inline-block bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full shadow-md">
+                            ${game.discount}
+                        </span>
+                    </div>`}
+                    <div class="p-3.5 flex-grow flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-white text-sm sm:text-base line-clamp-1">${game.title}</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">${game.publisher}</p>
+                        </div>
+                        <button ${hasPackages ? '' : 'disabled'} class="w-full mt-3.5 py-2 bg-slate-800 ${hasPackages ? 'hover:bg-cyan-400 hover:text-slate-950 text-cyan-400 cursor-pointer' : 'text-slate-400 cursor-not-allowed'} rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid ${hasPackages ? 'fa-cart-shopping' : 'fa-clock'} text-xs"></i> ${hasPackages ? 'Top Up' : 'ឆាប់ៗនេះ (Coming Soon)'}
+
+                            </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Category Filter Function
+        function filterCategory(cat) {
+            const btns = document.querySelectorAll('.category-btn');
+            btns.forEach(btn => {
+                btn.classList.remove('bg-cyan-400', 'text-slate-950', 'shadow-md');
+                btn.classList.add('bg-slate-900', 'text-slate-300');
+            });
+            event.target.classList.remove('bg-slate-900', 'text-slate-300');
+            event.target.classList.add('bg-cyan-400', 'text-slate-950', 'shadow-md');
+
+            if (cat === 'all') {
+                renderGames(gamesData);
+            } else {
+                const filtered = gamesData.filter(g => g.category === cat);
+                renderGames(filtered);
+            }
+        }
+
+        // Search Filters
+        function filterGames() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = gamesData.filter(g => g.title.toLowerCase().includes(query) || g.publisher.toLowerCase().includes(query));
+            renderGames(filtered);
+        }
+
+        function filterGamesMobile() {
+            const query = document.getElementById('mobileSearchInput').value.toLowerCase();
+            const filtered = gamesData.filter(g => g.title.toLowerCase().includes(query) || g.publisher.toLowerCase().includes(query));
+            renderGames(filtered);
+        }
+
+        // Open Interactive Order Modal
+        function openTopupModal(game) {
+            selectedGame = game;
+            selectedPackage = null;
+
+            const modalGameIcon = document.getElementById('modalGameIcon');
+            modalGameIcon.src = game.image || '';
+            modalGameIcon.classList.toggle('hidden', !game.image);
+            document.getElementById('modalGameTitle').innerText = game.title;
+            document.getElementById('modalGamePublisher').innerText = game.publisher;
+
+            document.getElementById('userIdLabel').innerHTML = `${game.userIdLabel || 'User ID / Game ID'} <span class="text-rose-500">*</span>`;
+            
+            const zoneContainer = document.getElementById('zoneIdContainer');
+            
+            if (game.hasZoneId) {
+                zoneContainer.classList.remove('hidden');
+                document.getElementById('zoneIdLabel').innerHTML = `${game.zoneIdLabel || 'Zone ID / Server ID'} <span class="text-rose-500">*</span>`;
+            } else {
+                zoneContainer.classList.add('hidden');
+            }
+
+            document.getElementById('userIdInput').value = '';
+            document.getElementById('zoneIdInput').value = '';
+            document.getElementById('verifyResult').innerText = '';
+
+            const pkgGrid = document.getElementById('packageGrid');
+            pkgGrid.innerHTML = '';
+
+            const packageGroups = game.id === 'pubg'
+                ? [
+                    {
+                        id: 'hot',
+                        title: 'Hot Items',
+                        icon: 'fa-fire',
+                        headingClass: 'text-pink-500'
+                    },
+                    { id: 'standard', title: '' }
+                ]
+                : game.id === 'HONOR OF KINGS'
+                ? [
+                    {
+                        id: 'hot',
+                        title: 'Hot Items',
+                        icon: 'fa-fire',
+                        headingClass: 'text-pink-500'
+                    },
+                    { id: 'standard', title: '' }
+                ]
+                : game.packages.some(pkg => pkg.group)
+                ? [
+                {
+                    id: 'recommended',
+                    title: 'Recommended for You',
+                    icon: 'fa-wand-magic-sparkles',
+                    headingClass: 'text-amber-500'
+                },
+                {
+                    id: 'hot',
+                    title: 'Hot Items',
+                    icon: 'fa-fire',
+                    headingClass: 'text-pink-500'
+                },
+                {
+                    id: 'diamonds',
+                    title: 'Diamond Packages',
+                    icon: 'fa-gem',
+                    headingClass: 'text-cyan-400',
+                    image: 'image/diamond.png'
+                }
+                ]
+                : [{ id: 'standard', title: '' }];
+            let firstPackage = true;
+
+            packageGroups.forEach(group => {
+                const packages = group.id === 'standard'
+                ? game.packages.filter(pkg => !pkg.group || pkg.group === 'standard')
+                    : game.packages.filter(pkg => pkg.group === group.id);
+                if (packages.length === 0) return;
+
+                const section = document.createElement('section');
+            section.className = (game.id === 'pubg' && group.id === 'standard')
+                || (game.id === 'HONOR OF KINGS' && group.id === 'standard')
+                || (game.id === 'ff' && group.id === 'diamonds')
+                ? 'col-span-full border-t border-slate-700/80 pt-5 mt-1'
+                : 'col-span-full';
+                if (group.title) {
+                    section.innerHTML = `
+                        <h5 class="flex items-center gap-2 text-sm font-semibold ${group.headingClass} mb-3">
+                            <i class="fa-solid ${group.icon}"></i>${group.title}
+                        </h5>
+                    `;
+                }
+                const cards = document.createElement('div');
+                cards.className = game.id === 'pubg' && group.id === 'hot'
+                    ? 'grid grid-cols-1 sm:grid-cols-3 gap-3'
+                    : game.id === 'HONOR OF KINGS'
+                    ? 'grid grid-cols-2 sm:grid-cols-3 gap-3'
+                    : group.id === 'standard' || group.id === 'diamonds'
+                    ? 'grid grid-cols-2 sm:grid-cols-3 gap-3'
+                    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3';
+
+                packages.forEach(pkg => {
+                    const item = document.createElement('div');
+                    const useOriginalPackageColors = (game.id === 'mlbb' || game.id === 'ff' || game.id === 'HONOR OF KINGS')
+                        && (group.id === 'recommended' || group.id === 'hot');
+                    item.className = useOriginalPackageColors
+                        ? 'package-card package-original p-3 bg-slate-800/60 border border-slate-700/80 hover:border-cyan-400 rounded-2xl cursor-pointer transition flex items-center justify-between gap-2'
+                        : game.id === 'BLOOD STRIKE'
+                        ? 'package-card p-3 bg-slate-800/60 border border-slate-700/80 hover:border-cyan-400 rounded-2xl cursor-pointer transition flex items-center justify-between gap-2'
+                        : game.id === 'pubg' && group.id === 'standard'
+                        ? 'package-card package-regular p-3 bg-slate-800/60 border border-slate-700/80 hover:border-cyan-400 rounded-xl cursor-pointer transition flex items-center justify-between gap-2'
+                        : game.id === 'pubg' && group.id === 'hot'
+                        ? 'package-card package-regular p-3 bg-slate-800/60 border border-slate-700/80 hover:border-cyan-400 rounded-2xl cursor-pointer transition flex items-center justify-between gap-2'
+                        : group.id === 'standard' || group.id === 'diamonds'
+                        ? 'package-card p-3 bg-slate-800/60 border border-slate-700/80 hover:border-cyan-400 rounded-2xl cursor-pointer transition flex flex-col justify-between'
+                        : `package-card ${group.id === 'recommended' ? 'package-recommended' : 'package-hot'} p-3 ${group.id === 'recommended' ? 'bg-amber-50/80 border-amber-200 hover:border-amber-400' : 'bg-[#fffafb] border-pink-100 hover:border-pink-300'} border rounded-2xl cursor-pointer transition flex items-center justify-between gap-2 shadow-sm`;
+                    item.onclick = () => selectPackage(pkg, item);
+                    item.innerHTML = game.id === 'BLOOD STRIKE'
+                        ? `
+                            <div class="min-w-0">
+                                <span class="font-bold text-xs text-white block mb-1">${pkg.name}</span>
+                                <span class="text-sm font-black text-amber-400">$${pkg.priceUSD.toFixed(2)}</span>
+                            </div>
+                            <img src="${game.image}" alt="" class="w-9 h-9 rounded-lg object-cover shrink-0">
+                        `
+                        : game.id === 'deltaforce'
+                        ? `
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <span class="font-bold text-xs text-white block mb-1">${pkg.name}</span>
+                                    <span class="text-sm font-black text-amber-400">$${pkg.priceUSD.toFixed(2)}</span>
+                                </div>
+                                <i class="fa-solid ${pkg.icon} text-cyan-400 text-base shrink-0" aria-hidden="true"></i>
+                            </div>
+                        `
+                        : game.id === 'HONOR OF KINGS' && group.id === 'standard'
+                        ? `
+                            <span class="font-bold text-xs text-white block mb-1">${pkg.name}</span>
+                            <div class="mt-2 flex items-center justify-between">
+                                <span class="text-sm font-black text-amber-400">$${pkg.priceUSD.toFixed(2)}</span>
+                                <i class="fa-solid fa-coins text-cyan-400" aria-hidden="true"></i>
+                            </div>
+                        `
+                        : game.id === 'valorant'
+                        ? `
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <span class="font-bold text-xs text-white block mb-1">${pkg.name}</span>
+                                    <span class="text-sm font-black text-amber-400">$${pkg.priceUSD.toFixed(2)}</span>
+                                </div>
+                                <div class="relative w-7 h-7 overflow-hidden rounded-md bg-slate-900 shrink-0">
+                                    <img src="${game.image}" alt="Valorant logo" class="absolute w-[72px] max-w-none h-[54px] left-1/2 -translate-x-1/2 top-[-1px]">
+                                </div>
+                            </div>
+                        `
+                        : game.id === 'pubg' && group.id === 'standard'
+                        ? `
+                            <div class="min-w-0">
+                                <span class="font-bold text-xs text-white block mb-1">${pkg.name}</span>
+                                <span class="text-sm font-black text-amber-400">$${pkg.priceUSD.toFixed(2)}</span>
+                            </div>
+                            <span class="font-black italic text-[9px] text-cyan-400 shrink-0">UC</span>
+                        `
+                        : group.id === 'diamonds'
+                        ? `
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <span class="font-bold text-xs text-white block mb-1">${pkg.name}</span>
+                                    <span class="text-sm font-black text-amber-400">$${pkg.priceUSD.toFixed(2)}</span>
+                                </div>
+                                <div class="relative w-8 h-8 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-gem text-cyan-400"></i>
+                                    <img src="${group.image}" alt="" class="absolute inset-0 w-8 h-8 object-contain" onerror="this.remove()">
+                                </div>
+                            </div>
+                        `
+                        : group.id === 'standard'
+                        ? `
+                            <span class="font-bold text-xs text-white block mb-1">${pkg.name}</span>
+                            <div class="mt-2">
+                                <span class="text-sm font-black text-amber-400">$${pkg.priceUSD.toFixed(2)}</span>
+                            </div>
+                        `
+                        : `
+                            <div class="min-w-0">
+                                <span class="font-bold text-xs ${game.id === 'pubg' || useOriginalPackageColors ? 'text-white' : 'text-slate-800'} block mb-1">${pkg.name}</span>
+                                <span class="text-xs font-semibold ${game.id === 'pubg' || useOriginalPackageColors ? 'text-amber-400' : 'text-amber-600'}">$${pkg.priceUSD.toFixed(2)}</span>
+                            </div>
+                            <div class="relative w-10 h-10 rounded-full ${game.id === 'pubg' || useOriginalPackageColors ? 'bg-cyan-500/10 text-cyan-400' : group.id === 'recommended' ? 'bg-amber-100 text-amber-500' : 'bg-pink-100 text-pink-500'} flex items-center justify-center shrink-0">
+                                ${game.id === 'pubg' ? '<span class="font-black italic text-[10px] text-cyan-400">UC</span>' : `<i class="fa-solid ${pkg.icon}"></i>`}
+                                <span class="absolute -top-1 -right-2 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[8px] font-black">
+                                    <i class="fa-solid fa-star"></i> TOP
+                                </span>
+                            </div>
+                        `;
+                    cards.appendChild(item);
+
+                    if (firstPackage) {
+                        selectPackage(pkg, item);
+                        firstPackage = false;
+                    }
+                });
+
+                section.appendChild(cards);
+                pkgGrid.appendChild(section);
+            });
+
+            document.getElementById('topupModal').classList.remove('hidden');
+        }
+
+        function selectPackage(pkg, element) {
+            selectedPackage = pkg;
+            
+            document.querySelectorAll('.package-card').forEach(el => {
+                el.classList.remove('border-amber-400', 'ring-2', 'ring-amber-200', 'border-pink-300', 'ring-pink-200', 'border-slate-400', 'ring-slate-200', 'border-cyan-400', 'bg-cyan-950/40');
+            });
+            if (element.classList.contains('package-original')) {
+                element.classList.add('border-cyan-400', 'bg-cyan-950/40');
+            } else if (element.classList.contains('package-recommended')) {
+                element.classList.add('border-amber-400', 'ring-2', 'ring-amber-200');
+            } else if (element.classList.contains('package-hot')) {
+                element.classList.add('border-pink-300', 'ring-2', 'ring-pink-200');
+            } else {
+                element.classList.add('border-cyan-400', 'bg-cyan-950/40');
+            }
+
+            document.getElementById('totalPriceUSD').innerText = `$${pkg.priceUSD.toFixed(2)}`;
+        }
+
+        function closeModal() {
+            document.getElementById('topupModal').classList.add('hidden');
+        }
+
+        // Account Verification Simulation (Placed on the Right)
+        function verifyAccountId() {
+            const uid = document.getElementById('userIdInput').value.trim();
+            const res = document.getElementById('verifyResult');
+
+            if (!uid) {
+                res.innerHTML = '<span class="inline-flex items-center gap-1 text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-md border border-rose-500/20"><i class="fa-solid fa-triangle-exclamation"></i> សូមបញ្ចូល ID ជាមុនសិន!</span>';
+                showToast('សូមបញ្ចូល User ID!', 'warning');
+                return;
+            }
+
+            res.innerHTML = '<span class="inline-flex items-center gap-1 text-cyan-400 animate-pulse bg-cyan-500/10 px-2.5 py-1 rounded-md border border-cyan-500/20"><i class="fa-solid fa-spinner fa-spin"></i> កំពុងពិនិត្យ...</span>';
+
+            setTimeout(() => {
+                res.innerHTML = '<span class="inline-flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/30 shadow-sm"><i class="fa-solid fa-circle-check"></i> គណនី: <strong class="text-white">RikiGamer_KH88</strong></span>';
+                showToast('បានស្វែងរកឃើញឈ្មោះអាខោន!', 'success');
+            }, 500);
+        }
+
+        // Process Checkout
+        function processCheckout() {
+            const uid = document.getElementById('userIdInput').value.trim();
+            if (!uid) {
+                showToast('សូមបញ្ចូល User ID / Player ID របស់អ្នក!', 'warning');
+                document.getElementById('userIdInput').focus();
+                return;
+            }
+
+            if (selectedGame.hasZoneId && !document.getElementById('zoneIdInput').value.trim()) {
+                showToast('សូមបញ្ចូល Zone ID / Server ID របស់អ្នក!', 'warning');
+                document.getElementById('zoneIdInput').focus();
+                return;
+            }
+
+            if (!selectedPackage) {
+                showToast('សូមជ្រើសរើសកញ្ចប់ទំនិញ!', 'warning');
+                return;
+            }
+
+            const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
+
+            currentTransaction = {
+                id: 'ORD' + Math.floor(100000 + Math.random() * 900000),
+                gameTitle: selectedGame.title,
+                userId: uid + (selectedGame.hasZoneId ? ` (${document.getElementById('zoneIdInput').value.trim()})` : ''),
+                packageName: selectedPackage.name,
+                priceUSD: selectedPackage.priceUSD,
+                paymentMethod: paymentMethod,
+                date: new Date().toLocaleString('km-KH')
+            };
+
+            closeModal();
+            openKhqrModal();
+        }
+
+        // Open KHQR Modal
+        function openKhqrModal() {
+            document.getElementById('khqrOrderId').innerText = currentTransaction.id;
+            document.getElementById('khqrGameTitle').innerText = currentTransaction.gameTitle;
+            document.getElementById('khqrAccount').innerText = currentTransaction.userId;
+            document.getElementById('khqrAmount').innerText = `$${currentTransaction.priceUSD.toFixed(2)}`;
+
+            document.getElementById('khqrModal').classList.remove('hidden');
+
+            let time = 900;
+            const timerEl = document.getElementById('timerCountdown');
+            clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                let mins = Math.floor(time / 60);
+                let secs = time % 60;
+                timerEl.innerText = `${mins < 10 ? '0':''}${mins}:${secs < 10 ? '0':''}${secs}`;
+                if (time <= 0) {
+                    clearInterval(timerInterval);
+                    closeKhqrModal();
+                    showToast('ការទូទាត់បានអស់សុពលភាព! សូមព្យាយាមម្ដងទៀត។', 'warning');
+                }
+                time--;
+            }, 1000);
+        }
+
+        function closeKhqrModal() {
+            clearInterval(timerInterval);
+            document.getElementById('khqrModal').classList.add('hidden');
+        }
+
+        // Confirm Payment (Simulate Payment Success + Trigger Confetti)
+        function confirmPayment() {
+            closeKhqrModal();
+
+            // Save to LocalStorage
+            let history = JSON.parse(localStorage.getItem('riki_topup_history') || '[]');
+            history.unshift(currentTransaction);
+            localStorage.setItem('riki_topup_history', JSON.stringify(history));
+
+            // Trigger Confetti Effect
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+
+            // Populate Success Modal
+            const rc = document.getElementById('receiptContent');
+            rc.innerHTML = `
+                <div class="flex justify-between py-1 border-b border-slate-700/50">
+                    <span class="text-slate-400">លេខប្រតិបត្តិការ:</span>
+                    <span class="font-mono font-bold text-cyan-400">${currentTransaction.id}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-700/50">
+                    <span class="text-slate-400">ឈ្មោះហ្គេម:</span>
+                    <span class="font-bold text-white">${currentTransaction.gameTitle}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-700/50">
+                    <span class="text-slate-400">អាខោន ID:</span>
+                    <span class="font-bold text-slate-200">${currentTransaction.userId}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-700/50">
+                    <span class="text-slate-400">កញ្ចប់ទំនិញ:</span>
+                    <span class="font-bold text-amber-400">${currentTransaction.packageName}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-700/50">
+                    <span class="text-slate-400">វិធីសាស្ត្រទូទាត់:</span>
+                    <span class="font-bold text-white">${currentTransaction.paymentMethod}</span>
+                </div>
+                <div class="flex justify-between py-1">
+                    <span class="text-slate-400">កាលបរិច្ឆេទ:</span>
+                    <span class="text-slate-300">${currentTransaction.date}</span>
+                </div>
+            `;
+
+            document.getElementById('successModal').classList.remove('hidden');
+            showToast('ការទូទាត់ជោគជ័យ! ទំនិញត្រូវបានបញ្ជូនទៅកាន់អាខោន។', 'success');
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').classList.add('hidden');
+        }
+
+        // Order History Modal
+        function openHistoryModal() {
+            const list = document.getElementById('historyList');
+            let history = JSON.parse(localStorage.getItem('riki_topup_history') || '[]');
+
+            if (history.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12 text-slate-400">
+                        <i class="fa-solid fa-receipt text-4xl mb-3 text-slate-600"></i>
+                        <p class="text-xs">មិនទាន់មានប្រវត្តិទិញនៅឡើយទេ</p>
+                    </div>
+                `;
+            } else {
+                list.innerHTML = '';
+                history.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60 flex flex-col sm:flex-row justify-between sm:items-center gap-2';
+                    row.innerHTML = `
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-sm text-white">${item.gameTitle}</span>
+                                <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2.5 py-0.5 rounded-full border border-emerald-500/30 font-semibold">ជោគជ័យ</span>
+                            </div>
+                            <p class="text-xs text-slate-300 mt-1">ID: ${item.userId} | ${item.packageName}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">${item.date}</p>
+                        </div>
+                        <div class="sm:text-right">
+                            <span class="text-sm font-black text-amber-400 block">$${item.priceUSD.toFixed(2)}</span>
+                            <span class="text-[10px] text-cyan-400 font-mono">${item.id}</span>
+                        </div>
+                    `;
+                    list.appendChild(row);
+                });
+            }
+
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        // Order Status Tracking Modal
+        function openOrderStatusModal() {
+            document.getElementById('trackOrderInput').value = '';
+            document.getElementById('trackResultContainer').classList.add('hidden');
+            document.getElementById('orderStatusModal').classList.remove('hidden');
+        }
+
+        function closeOrderStatusModal() {
+            document.getElementById('orderStatusModal').classList.add('hidden');
+        }
+
+        function searchOrderStatus() {
+            const query = document.getElementById('trackOrderInput').value.trim().toLowerCase();
+            const resContainer = document.getElementById('trackResultContainer');
+
+            if (!query) {
+                showToast('សូមបញ្ចូល Order ID ឬលេខទូរស័ព្ទ!', 'warning');
+                return;
+            }
+
+            let history = JSON.parse(localStorage.getItem('riki_topup_history') || '[]');
+            let found = history.find(item => item.id.toLowerCase() === query);
+
+            resContainer.classList.remove('hidden');
+
+            if (found) {
+                resContainer.innerHTML = `
+                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-emerald-500/40 text-xs space-y-2">
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+                            <span class="text-slate-300 font-semibold">ស្ថានភាព (Status):</span>
+                            <span class="px-2.5 py-1 bg-emerald-500/20 text-emerald-400 rounded-full font-bold border border-emerald-500/30">
+                                <i class="fa-solid fa-circle-check"></i> បញ្ចូលរួចរាល់ (Completed)
+                            </span>
+                        </div>
+                        <div class="flex justify-between"><span class="text-slate-400">Order ID:</span><span class="font-mono text-cyan-400 font-bold">${found.id}</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">ហ្គេម:</span><span class="text-white font-semibold">${found.gameTitle}</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">អាខោន ID:</span><span class="text-slate-200">${found.userId}</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">កញ្ចប់:</span><span class="text-amber-400 font-bold">${found.packageName}</span></div>
+                    </div>
+                `;
+            } else {
+                resContainer.innerHTML = `
+                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-rose-500/40 text-xs text-center text-rose-400">
+                        <i class="fa-solid fa-circle-xmark text-2xl mb-2"></i>
+                        <p>មិនរកឃើញការបញ្ជាទិញដែលមានលេខកូដ "${query}" ឡើយ</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize App
+        window.onload = function() {
+            renderGames(gamesData);
+        };
+    </script>
+</body>
+</html>
